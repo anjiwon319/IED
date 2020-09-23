@@ -1,5 +1,5 @@
 #define PIN_LED 7
-unsigned int count, toggle;
+unsigned int count;
 
 void setup() {
   pinMode(PIN_LED, OUTPUT);
