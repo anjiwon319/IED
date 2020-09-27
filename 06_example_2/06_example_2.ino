@@ -1,13 +1,22 @@
 // LED breathing using analog input (PWM)
 #include <math.h>
+#define PIN_LED 9
 
 void setup()
 {
-  pinMode(9, OUTPUT); // analog output
+  pinMode(PIN_LED, OUTPUT); // analog output
 }
 
 void loop()
 {
-  float val = (exp(sin(millis()/1000.0*PI)) - 0.36787944)*108.0;
-  analogWrite(9, 255 - val);
+  for (int val = 0; val<= 255; val += 5){
+    analogWrite(PIN_LED, val);
+    delay(25);
+  }
+  
+   for (int val = 255; val>= 0; val -= 5){
+    analogWrite(PIN_LED, val);
+    delay(25);
+  }
+
 }
