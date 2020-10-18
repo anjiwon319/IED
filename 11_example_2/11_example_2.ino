@@ -58,7 +58,7 @@ void loop() {
   dist_ema = alpha*dist_raw + (1-alpha)*dist_ema;
 
 // output the read value to the serial port
-  Serial.print("Min:100,Low:180,raw:");
+  Serial.print("Min:100,raw:");
   Serial.print(dist_raw);
   Serial.print(",ema:");
   Serial.print(dist_ema);
