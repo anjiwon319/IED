@@ -8,7 +8,7 @@
 #define INTERVAL 25 // sampling interval (unit: ms)
 #define _DIST_MIN 100 // minimum distance to be measured (unit: mm)
 #define _DIST_MAX 300 // maximum distance to be measured (unit: mm)
-#define _DIST_ALPHA 0.5 // EMA weight of new sample (range: 0 to 1). Setting this value to 1 effectively disables EMA filter.
+#define _DIST_ALPHA 0.1 // EMA weight of new sample (range: 0 to 1). Setting this value to 1 effectively disables EMA filter.
 
 // global variables
 float timeout; // unit: us
@@ -45,7 +45,7 @@ void loop() {
 
 // get a distance reading from the USS
   dist_raw = USS_measure(PIN_TRIG,PIN_ECHO);
-  dist_ema = 0.5 * dist_raw + (1-0.5)*dist_ema;
+  dist_ema = alpha * dist_raw + (1-alpha)*dist_ema;
 
 // output the read value to the serial port
   Serial.print("Min:0,");
@@ -54,7 +54,6 @@ void loop() {
   Serial.print(",");
   Serial.print("ema:");
   Serial.print(dist_ema);
-  //Serial.print(map(dist_ema,0,400,100,500));
   Serial.print(",");
   Serial.println("Max:500");
 
