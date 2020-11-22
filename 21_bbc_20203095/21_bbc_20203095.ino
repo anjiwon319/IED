@@ -18,7 +18,7 @@ int b = 285; // unit: mm
 
 // global variables
 float timeout; // unit: us
-float dist_min, dist_max, raw_dist, prev_dist, ema_dist, alpha, duty_val, dist_cali; // unit: mm
+float dist_min, dist_max, raw_dist, ema_dist, alpha, duty_val, dist_cali; // unit: mm
 unsigned long last_sampling_time; // unit: ms
 Servo myservo;
 
@@ -34,7 +34,7 @@ void setup() {
   dist_min = _DIST_MIN; 
   dist_max = _DIST_MAX;
   timeout = (INTERVAL / 2) * 1000.0; // precalculate pulseIn() timeout value. (unit: us)
-  raw_dist = prev_dist = ema_dist = 0.0; // raw distance output from USS (unit: mm)
+  raw_dist = ema_dist = 0.0; // raw distance output from USS (unit: mm)
   alpha = 0.1;
   
 // initialize serial port
