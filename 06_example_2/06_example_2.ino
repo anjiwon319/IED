@@ -1,5 +1,4 @@
 // LED breathing using analog input (PWM)
-#include <math.h>
 #define PIN_LED 9
 
 void setup()

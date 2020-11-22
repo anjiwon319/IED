@@ -5,14 +5,13 @@
 
 // configurable parameters
 #define SND_VEL 346.0 // sound velocity at 24 celsius degree (unit: m/s)
-#define INTERVAL 25 // sampling interval (unit: ms)
+#define INTERVAL 100 // sampling interval (unit: ms)
 #define _DIST_MIN 100 // minimum distance to be measured (unit: mm)
 #define _DIST_MAX 300 // maximum distance to be measured (unit: mm)
 
 // global variables
 float timeout; // unit: us
 float dist_min, dist_max, dist_raw; // unit: mm
-unsigned long last_sampling_time; // unit: ms
 float scale; // used for pulse duration to distance conversion
 
 void setup() {
@@ -31,16 +30,9 @@ void setup() {
 
 // initialize serial port
   Serial.begin(57600);
-
-// initialize last sampling time
-  last_sampling_time = 0;
 }
 
 void loop() {
-// wait until next sampling time. 
-// millis() returns the number of milliseconds since the program started. Will overflow after 50 days.
-  if(millis() < last_sampling_time + INTERVAL) return;
-
 // get a distance reading from the USS
   dist_raw = USS_measure(PIN_TRIG,PIN_ECHO);
 
@@ -52,47 +44,30 @@ void loop() {
   Serial.println("Max:400");
 
 // turn on the LED if the distance is between dist_min and dist_max
-  float val;
-  float VAL;
   if(dist_raw < dist_min || dist_raw > dist_max) {
     analogWrite(PIN_LED, 255);
-    }
-  else{
-    if(dist_min <= dist_raw && dist_raw <= 200) {
-      val = 510 - (255/100 * dist_raw);
-      analogWrite(PIN_LED, val);
-      }
-    if(200 <= dist_raw && dist_raw <= dist_max) {
-      VAL = (255/100 * dist_raw) - 510;
-      analogWrite(PIN_LED, VAL);
-      }
-    }
-     
-// update last sampling time
-  last_sampling_time += INTERVAL;
+  }
+  else {
+    analogWrite(PIN_LED, 0);
+  }
+
+// do something here
+  delay(50); // Assume that it takes 50ms to do something.
+  
+// wait until next sampling time.
+  delay(INTERVAL);
 }
 
 // get a distance reading from USS. return value is in millimeter.
 float USS_measure(int TRIG, int ECHO)
 {
   float reading;
-  float copy_reading;
-  float reading_val;
   digitalWrite(TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG, LOW);
   reading = pulseIn(ECHO, HIGH, timeout) * scale; // unit: mm
-  copy_reading = reading;
-  if(reading < dist_min || reading > dist_max) reading_val = 0.0; // return 0 when out of range.
-  else {
-    if(copy_reading == 0) {
-    }
-    else {
-      reading_val = copy_reading;
-    }
-  }
-  return reading_val;
-  
+  if(reading < dist_min || reading > dist_max) reading = 0.0; // return 0 when out of range.
+  return reading;
   // Pulse duration to distance conversion example (target distance = 17.3m)
   // - round trip distance: 34.6m
   // - expected pulse duration: 0.1 sec, or 100,000us

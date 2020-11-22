@@ -1,5 +1,8 @@
+#include <Servo.h>
+
 // Arduino pin assignment
 #define PIN_LED 9
+#define PIN_SERVO 10
 #define PIN_TRIG 12
 #define PIN_ECHO 13
 
@@ -9,11 +12,16 @@
 #define _DIST_MIN 100 // minimum distance to be measured (unit: mm)
 #define _DIST_MAX 300 // maximum distance to be measured (unit: mm)
 
+#define _DUTY_MIN 553 // servo full clockwise position (0 degree)
+#define _DUTY_NEU 1476 // servo neutral position (90 degree)
+#define _DUTY_MAX 2399 // servo full counterclockwise position (180 degree)
+
 // global variables
 float timeout; // unit: us
-float dist_min, dist_max, dist_raw; // unit: mm
+float dist_min, dist_max, dist_raw, dist_prev; // unit: mm
 unsigned long last_sampling_time; // unit: ms
 float scale; // used for pulse duration to distance conversion
+Servo myservo;
 
 void setup() {
 // initialize GPIO pins
@@ -22,11 +30,14 @@ void setup() {
   digitalWrite(PIN_TRIG, LOW); 
   pinMode(PIN_ECHO,INPUT);
 
+  myservo.attach(PIN_SERVO); 
+  myservo.writeMicroseconds(_DUTY_NEU);
+
 // initialize USS related variables
   dist_min = _DIST_MIN; 
   dist_max = _DIST_MAX;
   timeout = (INTERVAL / 2) * 1000.0; // precalculate pulseIn() timeout value. (unit: us)
-  dist_raw = 0.0; // raw distance output from USS (unit: mm)
+  dist_raw = dist_prev = 0.0; // raw distance output from USS (unit: mm)
   scale = 0.001 * 0.5 * SND_VEL;
 
 // initialize serial port
@@ -45,29 +56,26 @@ void loop() {
   dist_raw = USS_measure(PIN_TRIG,PIN_ECHO);
 
 // output the read value to the serial port
-  Serial.print("Min:0,");
-  Serial.print("raw:");
+  Serial.print("Min:100,Low:180,raw:");
   Serial.print(dist_raw);
-  Serial.print(",");
-  Serial.println("Max:400");
+  Serial.print(",servo:");
+  Serial.print(myservo.read());  
+  Serial.println(",High:220,Max:300");
 
-// turn on the LED if the distance is between dist_min and dist_max
-  float val;
-  float VAL;
-  if(dist_raw < dist_min || dist_raw > dist_max) {
-    analogWrite(PIN_LED, 255);
-    }
-  else{
-    if(dist_min <= dist_raw && dist_raw <= 200) {
-      val = 510 - (255/100 * dist_raw);
-      analogWrite(PIN_LED, val);
-      }
-    if(200 <= dist_raw && dist_raw <= dist_max) {
-      VAL = (255/100 * dist_raw) - 510;
-      analogWrite(PIN_LED, VAL);
-      }
-    }
-     
+// adjust servo position according to the USS read value
+
+  // add your code here!
+
+  if(dist_raw < 180.0) { //if (dist_raw > 180.0 && dist_raw <220.0)
+     myservo.writeMicroseconds(_DUTY_MIN);
+  }
+  else if(dist_raw < 220.0){
+     myservo.writeMicroseconds( _DUTY_NEU);
+  }
+  else {
+    myservo.writeMicroseconds(_DUTY_MAX);
+  }
+   
 // update last sampling time
   last_sampling_time += INTERVAL;
 }
@@ -76,31 +84,15 @@ void loop() {
 float USS_measure(int TRIG, int ECHO)
 {
   float reading;
-  float copy_reading;
-  float reading_val;
   digitalWrite(TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG, LOW);
+
   reading = pulseIn(ECHO, HIGH, timeout) * scale; // unit: mm
-  copy_reading = reading;
-  if(reading < dist_min || reading > dist_max) reading_val = 0.0; // return 0 when out of range.
-  else {
-    if(copy_reading == 0) {
-    }
-    else {
-      reading_val = copy_reading;
-    }
-  }
-  return reading_val;
+  if(reading < dist_min || reading > dist_max) reading = 0.0; // return 0 when out of range.
+
+  if(reading == 0.0) reading = dist_prev;
+  else dist_prev = reading;
   
-  // Pulse duration to distance conversion example (target distance = 17.3m)
-  // - round trip distance: 34.6m
-  // - expected pulse duration: 0.1 sec, or 100,000us
-  // - pulseIn(ECHO, HIGH, timeout) * 0.001 * 0.5 * SND_VEL
-  //           = 100,000 micro*sec * 0.001 milli/micro * 0.5 * 346 meter/sec
-  //           = 100,000 * 0.001 * 0.5 * 346 * micro * sec * milli * meter
-  //                                           ----------------------------
-  //                                           micro * sec
-  //           = 100 * 173 milli*meter = 17,300 mm = 17.3m
-  // pulseIn() returns microseconds.
+  return reading;
 }
