@@ -1,52 +1,35 @@
 #include <Servo.h>
 
-/////////////////////////////
-// Configurable parameters //
-/////////////////////////////
-
 // Arduino pin assignment
-#define PIN_LED 9    // [xxxx] LED 핀은 아두이노 9번 핀에 연결
-#define PIN_SERVO 10
 #define PIN_IR A0
+#define PIN_LED 9
+#define PIN_SERVO 10
 
-// Framework setting
-#define _DIST_TARGET 255
-#define _DIST_MIN 100
-#define _DIST_MAX 410
+// configurable parameters
+int a = 69; // unit: mm
+int b = 285; // unit: mm
+#define _DIST_MIN 100 // minimum distance to be measured (unit: mm)
+#define _DIST_MAX 450 // maximum distance to be measured (unit: mm)
+#define _DIST_TARGET 255 //target distance to be meaured (unit: mm)
 
-// Distance sensor
-#define _DIST_ALPHA 0.0
-
-// Servo range
-#define _DUTY_MIN 1000 
-#define _DUTY_NEU 1450 
-#define _DUTY_MAX 2000 
+#define _DUTY_MIN 1370 // servo full clockwise position (수평일 때보다 200mm위 )
+#define _DUTY_NEU 1470 // servo neutral position (수평일 때)
+#define _DUTY_MAX 1570 // servo full counterclockwise position (수평일 때보다 200mm 아래)
 
 // Servo speed control
 #define _SERVO_ANGLE 30 
 #define _SERVO_SPEED 30 
 
 // Event periods
-#define _INTERVAL_DIST 20 
-#define _INTERVAL_SERVO 20 
-#define _INTERVAL_SERIAL 100 
+#define _INTERVAL_DIST 20  // [3074] 거리측정주기 (ms)
+#define _INTERVAL_SERVO 20 // [3078] 서보제어주기 (ms)
+#define _INTERVAL_SERIAL 100 // [3078] Serial제어주기 (ms)
 
-// PID parameters
-#define _KP 0.0 
-
-//////////////////////
-// global variables //
-//////////////////////
-
-// Servo instance
+// global variables
+float timeout; // unit: us
+float dist_min, dist_max, raw_dist, ema_dist, alpha, duty_val, dist_cali; // unit: mm
 Servo myservo;
-
-// Distance sensor
-float dist_target; // location to send the ball
-float dist_raw, dist_ema;
-
-// Event periods
-unsigned long last_sampling_time_dist, last_sampling_time_servo, last_sampling_time_serial; 
+unsigned long last_sampling_time_dist, last_sampling_time_servo, last_sampling_time_serial; // unit: ms
 bool event_dist, event_servo, event_serial;
 
 // Servo speed control
@@ -57,71 +40,90 @@ int duty_target, duty_curr;
 float error_curr, error_prev, control, pterm, dterm, iterm;
 
 void setup() {
-// initialize GPIO pins for LED and attach servo 
+// initialize GPIO pins
+  pinMode(PIN_LED,OUTPUT);
+  digitalWrite(PIN_LED, 1);
 
-// initialize global variables
+  myservo.attach(PIN_SERVO); 
+  myservo.writeMicroseconds(_DUTY_NEU);
 
-// move servo to neutral position
+// initialize USS related variables
+  dist_min = _DIST_MIN; 
+  dist_max = _DIST_MAX;
+  timeout = (_INTERVAL_DIST / 2) * 1000.0; // precalculate pulseIn() timeout value. (unit: us)
+  raw_dist = ema_dist = 0.0; // raw distance output from USS (unit: mm)
+  alpha = 0.1;
 
 // initialize serial port
+  Serial.begin(57600);
+  
+// convert angle speed into duty change per interval
+  duty_chg_per_interval = (_DUTY_MAX - _DUTY_MIN) * (_SERVO_SPEED / 180.0) * (_INTERVAL_SERVO / 1000.0);
+  
+// initialize event variables
+  last_sampling_time_dist = last_sampling_time_servo = last_sampling_time_serial = 0;
+  event_dist = event_servo = event_serial = false;
 
-// convert angle speed into duty change per interval.
-  duty_chg_per_interval = ??;
 }
-  
+
 void loop() {
-/////////////////////
-// Event generator //
-/////////////////////
-
-
-////////////////////
-// Event handlers //
-////////////////////
-
+  unsigned long time_curr = millis();
+  if(time_curr >= last_sampling_time_dist + _INTERVAL_DIST) {
+        last_sampling_time_dist += _INTERVAL_DIST;
+        event_dist = true;
+  }
+  if(time_curr >= last_sampling_time_servo + _INTERVAL_SERVO) {
+        last_sampling_time_servo += _INTERVAL_SERVO;
+        event_servo = true;
+  }
+  if(time_curr >= last_sampling_time_serial + _INTERVAL_SERIAL) {
+        last_sampling_time_serial += _INTERVAL_SERIAL;
+        event_serial = true;
+  }
   if(event_dist) {
-      = false;
-  // get a distance reading from the distance sensor
-      ?? = ir_distance_filtered();
-
-  // PID control logic
-    error_curr = 
-    pterm = 
-    control = 
-
-  // duty_target = f(duty_neutral, control)
-    duty_target = 
-
-  // keep duty_target value within the range of [_DUTY_MIN, _DUTY_MAX]
-
+    event_dist = false;
+    // get a distance reading from the USS
+    raw_dist = ir_distance();
+    ema_dist = alpha*raw_dist + (1-alpha)*ema_dist;
+    dist_cali = 100 + 300.0 / (b - a) * (ema_dist - a);
   }
-  
+
   if(event_servo) {
-
-    // adjust duty_curr toward duty_target by duty_chg_per_interval
-
-    // update servo position
-
-  }
+    event_servo = false;
+    // adjust servo position according to the USS read value
+    if (dist_cali > _DIST_TARGET){
+      duty_val = _DUTY_MIN;
+      myservo.writeMicroseconds(duty_val);
+    }
+    else{
+      duty_val = _DUTY_MAX;
+      myservo.writeMicroseconds(duty_val);
+    }
+    // update last servo sampling time
+    last_sampling_time_servo += _INTERVAL_SERVO;
+   }
   
   if(event_serial) {
-    event_serial = ??;
-    Serial.print("dist_ir:");
-    Serial.print(dist_raw);
-    Serial.print(",pterm:");
-    Serial.print(map(pterm,-1000,1000,510,610));
-    Serial.print(",duty_target:");
-    Serial.print(map(duty_target,1000,2000,410,510));
-    Serial.print(",duty_curr:");
-    Serial.print(map(duty_curr,1000,2000,410,510));
-    Serial.println(",Min:100,Low:200,dist_target:255,High:310,Max:410");
+    event_serial = false;   
+    Serial.print("min:100,max:450,dist:");
+    Serial.print(raw_dist);
+    Serial.print(",ema:");
+    Serial.print(ema_dist);
+    Serial.print(",dist_cali:");
+    Serial.println(dist_cali);
+    // update last Serial sampling time
+    last_sampling_time_serial += _INTERVAL_SERIAL;
   }
+  
+  if(raw_dist > 156 && raw_dist <224) digitalWrite(PIN_LED, 0);
+  else digitalWrite(PIN_LED, 255);
+  delay(20);
+
 }
 
 float ir_distance(void){ // return value unit: mm
-
-}
-
-float ir_distance_filtered(void){ // return value unit: mm
-  return ir_distance(); // for now, just use ir_distance() without noise filter.
+  float val;
+  float volt = float(analogRead(PIN_IR));
+  val = ((6762.0/(volt-9.0))-4.0) * 10.0;
+  return val;
 }
