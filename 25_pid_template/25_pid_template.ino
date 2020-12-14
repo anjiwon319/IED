@@ -6,23 +6,23 @@
 #define PIN_SERVO 10
 
 // configurable parameters
-int a = 69; // unit: mm
-int b = 298; // unit: mm
+int a = 72; // unit: mm
+int b = 294; // unit: mm
 
 #define _DIST_MIN 100 // minimum distance to be measured (unit: mm)
-#define _DIST_MAX 450 // maximum distance to be measured (unit: mm)
+#define _DIST_MAX 430 // maximum distance to be measured (unit: mm)
 #define _DIST_TARGET 255 //target distance to be meaured (unit: mm)
 
 #define _DUTY_MIN 1106 // servo full clockwise position (0 degree)
-#define _DUTY_NEU 1476 // servo neutral position (90 degree)
-#define _DUTY_MAX 2006 // servo full counterclockwise position (180 degree)
+#define _DUTY_NEU 1676 // servo neutral position (90 degree)
+#define _DUTY_MAX 2106 // servo full counterclockwise position (180 degree)
 
 // Distance sensor
-#define _DIST_ALPHA 0.1 // ema필터의 alpha 값을 설정
+#define _DIST_ALPHA 0.2 // ema필터의 alpha 값을 설정
 
 // Servo speed control
 #define _SERVO_ANGLE 30 
-#define _SERVO_SPEED 80 
+#define _SERVO_SPEED 100 
 
 // Event periods
 #define _INTERVAL_DIST 20  // 거리측정주기 (ms)
@@ -30,8 +30,8 @@ int b = 298; // unit: mm
 #define _INTERVAL_SERIAL 100 // Serial제어주기 (ms)
 
 // PID parameters
-#define _KP 1.4 // 비례이득
-#define _KD 30.0 // 미분이득
+#define _KP 2.0 // 비례이득
+#define _KD 80.0 // 미분이득
 
 // Distance sensor
 float dist_target; // location to send the ball
@@ -55,7 +55,11 @@ void setup() {
   myservo.attach(PIN_SERVO); 
   myservo.writeMicroseconds(_DUTY_NEU);
   pinMode(PIN_LED,OUTPUT);
-
+    
+// initialize event variables
+  last_sampling_time_dist = last_sampling_time_servo = last_sampling_time_serial = 0;
+  event_dist = event_servo = event_serial = false;
+  
 // initialize global variables
   dist_min = _DIST_MIN; 
   dist_max = _DIST_MAX; // raw distance output from USS (unit: mm)
@@ -66,11 +70,7 @@ void setup() {
   Serial.begin(57600);
   
 // convert angle speed into duty change per interval
-  duty_chg_per_interval = (float)(_DUTY_MAX - _DUTY_MIN) * _SERVO_SPEED / 180 * _INTERVAL_SERVO / 1000.0;
-    
-// initialize event variables
-  last_sampling_time_dist = last_sampling_time_servo = last_sampling_time_serial = 0;
-  event_dist = event_servo = event_serial = false;
+  duty_chg_per_interval = (float)(_DUTY_MAX - _DUTY_MIN) * _SERVO_SPEED / 180 * _INTERVAL_SERVO / 1000;
 
 }
 
