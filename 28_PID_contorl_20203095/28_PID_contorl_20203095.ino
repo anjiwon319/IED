@@ -29,7 +29,7 @@
 #define _INTERVAL_SERIAL 100 
 
 // PID parameters
-#define _KP 2.787 // 비례이득
+#define _KP 2.7187 // 비례이득
 #define _KD 78.0 // 미분이득
 #define _KI 0.005 // 적분이득
 
