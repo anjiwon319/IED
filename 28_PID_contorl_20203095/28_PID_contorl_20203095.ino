@@ -29,7 +29,7 @@
 #define _INTERVAL_SERIAL 100 
 
 // PID parameters
-#define _KP 2.8187 // 비례이득
+#define _KP 2.787 // 비례이득
 #define _KD 78.0 // 미분이득
 #define _KI 0.005 // 적분이득
 
@@ -67,7 +67,8 @@ void setup() {
 // initialize GPIO pins for LED and attach servo 
   myservo.attach(PIN_SERVO);
   pinMode(PIN_LED, OUTPUT);
-  myservo.writeMicroseconds(_DUTY_NEU);
+  duty_curr = _DUTY_NEU;
+  myservo.writeMicroseconds(duty_curr);
 
 // initialize global variables
   last_sampling_time_dist = 0;
